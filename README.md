@@ -28,7 +28,7 @@
 
 ### 📋 Use Case
 
-You are a financial analyst in a hedge fund looking into AI Native Tech Stocks. You have 4 in mind: **SNOW**, **MSFT**, **AMZN**, and **NVDA**.
+You are a financial analyst in a hedge fund looking into AI Native Tech Stocks. You have 4 in mind: **GOOGL**, **MSFT**, **AMZN**, and **NVDA**.
 
 Because you know NVIDIA makes 90% of the GPUs for AI, you reckon this is worth investigating further. But you want to drill down on the **unstructured data** - 10-K, 8-K, 10-Q filings, investor call transcripts, and annual reports - to get a holistic view of the security based on all the data available, not just the fundamental data which is all structured.
 
@@ -72,9 +72,12 @@ Because you know NVIDIA makes 90% of the GPUs for AI, you reckon this is worth i
 ### 1️⃣ Prerequisites
 
 - Snowflake account with ACCOUNTADMIN access (✅ **Works with Trial Accounts!**)
-- Subscribe to **Cybersyn Financial & Economic Essentials** from Marketplace:
+- Subscribe to **Snowflake Public Data (Paid)** from Marketplace:
+
+  <img src="images/snowflake_public_data_paid.png" alt="Snowflake Public Data (Paid)" width="500"/>
+
   - Go to: **Data Products > Marketplace**
-  - Search: "Cybersyn Financial & Economic Essentials"
+  - Search: "Snowflake Public Data (Paid)"
   - Click "Get" (free trial available)
   - This provides: `SNOWFLAKE_PUBLIC_DATA_PAID.PUBLIC_DATA`
 
@@ -88,37 +91,17 @@ Because you know NVIDIA makes 90% of the GPUs for AI, you reckon this is worth i
 
 2. **Connect to Git Repository**:
    - Select **Create Workspace from Git Repository**
-   - Enter repository URL: `https://github.com/sfc-gh-cmoynihan/holly`
+   - Enter repository URL: `https://github.com/sfc-gh-cmoynihan/holly_4_trial_accounts`
    - Click **Create**
 
 3. **Run Installation Script**:
    - Open `INSTALL.sql` from the file explorer
    - Click **Run All** or press `Ctrl+Enter` / `Cmd+Enter`
-   - Estimated runtime: 5-10 minutes
+   - ⚠️ **Warning:** Installation can take up to 20 minutes
 
-#### Option B: Create Git Integration First (If Required)
+#### Option B: Manual Installation (No Git Required)
 
-If you see "No API integration available", run this SQL first:
-
-```sql
--- Run as ACCOUNTADMIN
-USE ROLE ACCOUNTADMIN;
-
--- Create API integration for GitHub
-CREATE OR REPLACE API INTEGRATION GITHUB_INTEGRATION
-    API_PROVIDER = git_https_api
-    API_ALLOWED_PREFIXES = ('https://github.com/sfc-gh-cmoynihan')
-    ENABLED = TRUE;
-
--- Grant usage to your role
-GRANT USAGE ON INTEGRATION GITHUB_INTEGRATION TO ROLE ACCOUNTADMIN;
-```
-
-Then follow Option A above.
-
-#### Option C: Manual Installation (No Git Required)
-
-1. Open the installation script directly: [INSTALL.sql](https://github.com/sfc-gh-cmoynihan/holly/blob/main/INSTALL.sql)
+1. Open the installation script directly: [INSTALL.sql](https://github.com/sfc-gh-cmoynihan/holly_4_trial_accounts/blob/main/INSTALL.sql)
 2. Click **Raw** to view the raw SQL
 3. Copy all the SQL content
 4. Paste into a new Snowflake worksheet
@@ -167,8 +150,8 @@ holly/
 
 | Query | Tool Used |
 |-------|-----------|
-| "Plot the share price of Microsoft, Amazon, Snowflake and Nvidia starting 20th Feb 2025 to 20th Feb 2026" | STOCK_PRICES |
-| "Are Nvidia, Microsoft, Amazon, Snowflake in the SP500" | SP500_COMPANIES |
+| "Plot the share price of Microsoft, Amazon, Google and Nvidia starting 20th Feb 2025 to 20th Feb 2026" | STOCK_PRICES |
+| "Are Nvidia, Microsoft, Amazon, Google in the SP500" | SP500_COMPANIES |
 | "What are the latest public transcripts for NVIDIA" | TRANSCRIPTS_SEARCH |
 | "Compare Nvidia's annual growth rate and Microsoft annual growth rate using the latest Annual reports" | SEC_FILINGS_SEARCH |
 | "What is the latest 10-K for Nvidia from the EDGAR Filings" | SEC_FILINGS_SEARCH |
@@ -186,7 +169,7 @@ This project is proprietary software for demonstration purposes.
 
 **Built with ❄️ Snowflake Cortex**
 
-*Data Source: Snowflake Marketplace (Cybersyn)*
+*Data Source: Snowflake Marketplace*
 
 ---
 

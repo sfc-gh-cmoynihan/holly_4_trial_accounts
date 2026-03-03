@@ -12,21 +12,21 @@
   1. ACCOUNTADMIN role or equivalent privileges
   2. Subscribe to the following Marketplace listing:
      
-     Cybersyn Financial & Economic Essentials (Free Trial)
+     Snowflake Public Data (Paid)
      - Go to: Data Products > Marketplace
-     - Search for: "Cybersyn Financial & Economic Essentials"
+     - Search for: "Snowflake Public Data (Paid)"
      - Click "Get" to subscribe (free trial available)
      - This provides: SNOWFLAKE_PUBLIC_DATA_PAID.PUBLIC_DATA
   
   WHAT THIS SCRIPT CREATES:
   -------------------------
   - Database: COLM_DB (with STRUCTURED, SEMI_STRUCTURED, UNSTRUCTURED schemas)
-  - Tables: SP500_COMPANIES (503 companies), STOCK_PRICE_TIMESERIES, EDGAR_FILINGS, PUBLIC_TRANSCRIPTS
+  - Tables: SP500_COMPANIES, STOCK_PRICE_TIMESERIES, EDGAR_FILINGS, PUBLIC_TRANSCRIPTS
   - Cortex Search Services: EDGAR_FILINGS, PUBLIC_TRANSCRIPTS_SEARCH
   - Semantic Views: STOCK_PRICE_TIMESERIES_SV, SP500
   - Agent: SNOWFLAKE_INTELLIGENCE.AGENTS.HOLLY
 
-  ESTIMATED RUNTIME: 5-10 minutes (depending on data volume)
+  ESTIMATED RUNTIME: ~10 minutes
 ================================================================================
 */
 
@@ -35,7 +35,9 @@
 -- ============================================================================
 USE ROLE ACCOUNTADMIN;
 ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
-CREATE WAREHOUSE IF NOT EXISTS SMALL_WH WITH WAREHOUSE_SIZE = 'XLARGE' AUTO_SUSPEND = 60;
+CREATE WAREHOUSE IF NOT EXISTS SMALL_WH WITH WAREHOUSE_SIZE = '2X-LARGE' AUTO_SUSPEND = 60;
+CREATE WAREHOUSE IF NOT EXISTS SMALL_IW WITH WAREHOUSE_SIZE = 'SMALL' ENABLE_QUERY_ACCELERATION = TRUE AUTO_SUSPEND = 60;
+ALTER WAREHOUSE SMALL_IW RESUME;
 USE WAREHOUSE SMALL_WH;
 
 -- ============================================================================
@@ -61,7 +63,7 @@ CREATE OR REPLACE TABLE COLM_DB.STRUCTURED.SP500_COMPANIES (
     FOUNDED VARCHAR
 );
 
--- Load S&P 500 companies (503 constituents as of March 2026 + SNOW)
+-- Load S&P 500 companies (503 constituents as of March 2026)
 INSERT INTO COLM_DB.STRUCTURED.SP500_COMPANIES (SYMBOL, COMPANY_NAME, SECTOR, INDUSTRY, HEADQUARTERS, DATE_ADDED, CIK, FOUNDED)
 SELECT * FROM VALUES
     ('MMM', '3M', 'Industrials', 'Industrial Conglomerates', 'Saint Paul, Minnesota', '1957-03-04', '66740', '1902'),
@@ -566,16 +568,14 @@ SELECT * FROM VALUES
     ('YUM', 'Yum! Brands', 'Consumer Discretionary', 'Restaurants', 'Louisville, Kentucky', '1997-10-06', '1041061', '1997'),
     ('ZBRA', 'Zebra Technologies', 'Information Technology', 'Electronic Equipment & Instruments', 'Lincolnshire, Illinois', '2019-12-23', '877212', '1969'),
     ('ZBH', 'Zimmer Biomet', 'Health Care', 'Health Care Equipment', 'Warsaw, Indiana', '2001-08-07', '1136869', '1927'),
-    ('ZTS', 'Zoetis', 'Health Care', 'Pharmaceuticals', 'Parsippany, New Jersey', '2013-06-21', '1555280', '1952'),
-    ('SNOW', 'Snowflake Inc.', 'Information Technology', 'Application Software', 'Bozeman, Montana', NULL, '1640147', '2012');
+    ('ZTS', 'Zoetis', 'Health Care', 'Pharmaceuticals', 'Parsippany, New Jersey', '2013-06-21', '1555280', '1952');
 
 
 -- ============================================================================
 -- STEP 4: CREATE STOCK PRICE DATA (from Cybersyn Marketplace)
 -- ============================================================================
 
-CREATE OR REPLACE TABLE COLM_DB.STRUCTURED.STOCK_PRICE_TIMESERIES 
-    CLUSTER BY (TICKER, DATE)
+CREATE OR REPLACE TABLE COLM_DB.STRUCTURED.STOCK_PRICE_TIMESERIES
     COMMENT = 'Historical stock price data for Cortex Analyst'
 AS
 SELECT 
@@ -591,13 +591,13 @@ FROM SNOWFLAKE_PUBLIC_DATA_PAID.PUBLIC_DATA.STOCK_PRICE_TIMESERIES
 WHERE TICKER IN (SELECT SYMBOL FROM COLM_DB.STRUCTURED.SP500_COMPANIES);
 
 ALTER TABLE COLM_DB.STRUCTURED.STOCK_PRICE_TIMESERIES SET CHANGE_TRACKING = TRUE;
+ALTER TABLE COLM_DB.STRUCTURED.STOCK_PRICE_TIMESERIES CLUSTER BY (TICKER, DATE);
 
 -- ============================================================================
 -- STEP 5: CREATE SEC EDGAR FILINGS DATA (from Cybersyn Marketplace)
 -- ============================================================================
 
 CREATE OR REPLACE TABLE COLM_DB.SEMI_STRUCTURED.EDGAR_FILINGS
-    CLUSTER BY (COMPANY_NAME, FILED_DATE)
     COMMENT = 'SEC filings for Cortex Search'
 AS
 SELECT 
@@ -618,6 +618,7 @@ WHERE r.FILED_DATE >= '2025-01-01'
   AND r.FORM_TYPE IN ('8-K', '10-K', '10-Q');
 
 ALTER TABLE COLM_DB.SEMI_STRUCTURED.EDGAR_FILINGS SET CHANGE_TRACKING = TRUE;
+ALTER TABLE COLM_DB.SEMI_STRUCTURED.EDGAR_FILINGS CLUSTER BY (COMPANY_NAME, FILED_DATE);
 
 -- ============================================================================
 -- STEP 6: CREATE PUBLIC TRANSCRIPTS DATA (All S&P 500 transcripts from Cybersyn)
@@ -646,6 +647,9 @@ ALTER TABLE COLM_DB.UNSTRUCTURED.PUBLIC_TRANSCRIPTS SET CHANGE_TRACKING = TRUE;
 -- ============================================================================
 -- STEP 7: CREATE CORTEX SEARCH SERVICES
 -- ============================================================================
+
+-- Scale up for Cortex Search indexing (most time-consuming step)
+ALTER WAREHOUSE SMALL_WH SET WAREHOUSE_SIZE = '4X-LARGE';
 
 -- 7.1 SEC Filings Search
 CREATE OR REPLACE CORTEX SEARCH SERVICE COLM_DB.SEMI_STRUCTURED.EDGAR_FILINGS_SEARCH
@@ -838,19 +842,18 @@ instructions:
     Combine multiple tools for comprehensive research.
   response: "Provide clear, data-driven responses with source attribution. Use tables for financial data. Specify dates for stock prices. Cite filing type and date for SEC filings. Be accurate with numbers."
   sample_questions:
-    - question: "Plot the share price of Microsoft, Amazon, Snowflake and Nvidia starting 20th Feb 2025 to 20th Feb 2026"
-    - question: "Are Nvidia, Microsoft, Amazon, Snowflake in the SP500"
+    - question: "Plot the share price of Microsoft, Amazon, Google and Nvidia starting 20th Feb 2025 to 20th Feb 2026"
+    - question: "Are Nvidia, Microsoft, Amazon, Google in the SP500"
     - question: "What are the latest public transcripts for NVIDIA"
     - question: "Compare Nvidia's annual growth rate and Microsoft annual growth rate using the latest Annual reports using a table format for all the key metrics"
     - question: "What is the latest 10-K for Nvidia from the EDGAR Filings"
-    - question: "What is the latest share price of NVIDIA"
     - question: "Would you recommend buying Nvidia Stock at 195"
 
 tools:
   - tool_spec:
       type: cortex_search
       name: TRANSCRIPTS_SEARCH
-      description: "Search public company event transcripts (earnings calls, investor conferences) from S&P 500 companies and Snowflake."
+      description: "Search public company event transcripts (earnings calls, investor conferences) from S&P 500 companies."
   - tool_spec:
       type: cortex_search
       name: SEC_FILINGS_SEARCH
@@ -896,7 +899,7 @@ tool_resources:
     semantic_view: "COLM_DB.STRUCTURED.STOCK_PRICE_TIMESERIES_SV"
     execution_environment:
       type: warehouse
-      warehouse: SMALL_WH
+      warehouse: SMALL_IW
     query_timeout: 120
   SP500_COMPANIES:
     semantic_view: "COLM_DB.STRUCTURED.SP500"
@@ -914,8 +917,11 @@ $$;
 
 GRANT USAGE ON AGENT SNOWFLAKE_INTELLIGENCE.AGENTS.HOLLY TO ROLE PUBLIC;
 
+-- Set agent avatar
+ALTER AGENT SNOWFLAKE_INTELLIGENCE.AGENTS.HOLLY SET PROFILE = '{"avatar": "robot"}';
+
 -- Scale down warehouse after heavy data loading
-ALTER WAREHOUSE SMALL_WH SET WAREHOUSE_SIZE = 'MEDIUM' AUTO_SUSPEND = 300;
+ALTER WAREHOUSE SMALL_WH SET WAREHOUSE_SIZE = 'SMALL' AUTO_SUSPEND = 60;
 
 -- ============================================================================
 -- STEP 10: VERIFICATION
