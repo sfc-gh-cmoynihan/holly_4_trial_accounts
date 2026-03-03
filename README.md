@@ -74,7 +74,7 @@ Because you know NVIDIA makes 90% of the GPUs for AI, you reckon this is worth i
 - Snowflake account with ACCOUNTADMIN access (✅ **Works with Trial Accounts!**)
 - Subscribe to **Snowflake Public Data (Paid)** from Marketplace:
 
-  <img src="images/snowflake_public_data_paid.png" alt="Snowflake Public Data (Paid)" width="500"/>
+  <img src="images/snowflake_paid.png" alt="Snowflake Public Data (Paid)" width="500"/>
 
   - Go to: **Data Products > Marketplace**
   - Search: "Snowflake Public Data (Paid)"
