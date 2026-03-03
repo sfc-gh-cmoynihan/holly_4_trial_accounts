@@ -18,7 +18,7 @@
 
 </div>
 
-> ⚠️ **Disclaimer:** This is a custom demo for Financial Services clients. The code is provided under an open source license with no guarantee of maintenance, security updates, or support.
+> ⚠️ **Disclaimer:** This is a free to use demo built on Snowflake. The code comes with no guarantee of maintenance, security updates, or support.
 
 ---
 
